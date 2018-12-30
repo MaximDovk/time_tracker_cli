@@ -14,7 +14,33 @@ const socket = new WebSocket(url)
 
 const ipAddress = ip.address()
 
+const TIMEOUT = 30000
+const TIMEOUT_LATENCY = 1000
+
+let pingTimeout
+
+const heartbeat = () => {
+  clearTimeout(pingTimeout)
+
+  pingTimeout = setTimeout(() => {
+    console.error('Terminating')
+
+    socket.terminate()
+
+    process.exit(3)
+  }, TIMEOUT + TIMEOUT_LATENCY)
+}
+
+socket.on('ping', heartbeat)
+socket.on('close', () => {
+  console.info('Closing')
+
+  clearTimeout(pingTimeout)
+})
+
 socket.on('open', () => {
+  heartbeat()
+
   macaddress.all((err, all) => {
     const macAddress = Object.values(all)
       .find((description) => description.ipv6 === ipAddress || description.ipv4 === ipAddress).mac
